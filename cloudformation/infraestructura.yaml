@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Infraestructura para Soluciones Tecnologicas del Futuro.
+  Incluye instancias EC2 y buckets S3.
+
+Parameters:
+  NombreProyecto:
+    Type: String
+    Default: STF
+    Description: Nombre del proyecto
+
+  TipoInstancia:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+    Description: Tipo de instancia EC2 (dentro del Free Tier)
+
+Resources:
+
+  # ========== S3 ==========
+
+  BucketAplicacion:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${NombreProyecto}-app-bucket'
+      Tags:
+        - Key: Proyecto
+          Value: !Ref NombreProyecto
+        - Key: Ambiente
+          Value: Produccion
+
+  BucketLogs:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${NombreProyecto}-logs-bucket'
+      Tags:
+        - Key: Proyecto
+          Value: !Ref NombreProyecto
+        - Key: Ambiente
+          Value: Produccion
+
+  # ========== EC2 ==========
+
+  ServidorWeb:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref TipoInstancia
+      ImageId: ami-0c02fb55956c7d316
+      IamInstanceProfile: LabRole
+      Tags:
+        - Key: Name
+          Value: !Sub '${NombreProyecto}-WebServer'
+        - Key: Proyecto
+          Value: !Ref NombreProyecto
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y docker
+          service docker start
+          echo "Servidor web iniciado - STF" > /var/www/html/index.html
+
+  ServidorApp:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref TipoInstancia
+      ImageId: ami-0c02fb55956c7d316
+      IamInstanceProfile: LabRole
+      Tags:
+        - Key: Name
+          Value: !Sub '${NombreProyecto}-AppServer'
+        - Key: Proyecto
+          Value: !Ref NombreProyecto
+
+# ========== Outputs ==========
+
+Outputs:
+  BucketAppNombre:
+    Description: Nombre del bucket de aplicacion
+    Value: !Ref BucketAplicacion
+
+  BucketLogsNombre:
+    Description: Nombre del bucket de logs
+    Value: !Ref BucketLogs
+
+  ServidorWebIP:
+    Description: IP publica del servidor web
+    Value: !GetAtt ServidorWeb.PublicIp
+
+  ServidorAppIP:
+    Description: IP publica del servidor de aplicacion
+    Value: !GetAtt ServidorApp.PublicIp
