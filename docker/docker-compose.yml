@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+
+  web:
+    build: .
+    container_name: stf-flask-app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    networks:
+      - stf-network
+    restart: always
+    environment:
+      - FLASK_ENV=production
+
+  nginx:
+    image: nginx:alpine
+    container_name: stf-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    networks:
+      - stf-network
+    restart: always
+
+volumes:
+  data:
+
+networks:
+  stf-network:
+    driver: bridge
